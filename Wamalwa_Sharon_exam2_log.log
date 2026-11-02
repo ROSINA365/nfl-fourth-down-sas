@@ -1,0 +1,1584 @@
+ 
+ 1          OPTIONS NONOTES NOSTIMER NOSOURCE NOSYNTAXCHECK;
+ 68         
+ 69         /*
+ 70         NFL 4th Down Decision Modeling
+ 71         A Logistic Regression Analysis of the 2025 NFL Season
+ 72         */
+ 73         
+ 74         
+ 75         /* Step 1: Import the 2025 NFL Play-by-Play Data */
+ 76         PROC IMPORT DATAFILE="/home/u64427539/play_by_play_2025.csv"
+ 77                     OUT=work.pbp_2025
+ 78                     DBMS=CSV REPLACE;
+ 79             GUESSINGROWS=MAX;
+ 80         RUN;
+ 
+ NOTE: Unable to open parameter catalog: SASUSER.PARMS.PARMS.SLIST in update mode. Temporary parameter values will be saved to 
+ WORK.PARMS.PARMS.SLIST.
+ Name lateral_punt_returner_player_name truncated to lateral_punt_returner_player_nam.
+ Name lateral_kickoff_returner_player_id truncated to lateral_kickoff_returner_player_.
+ Name lateral_kickoff_returner_player_name truncated to lateral_kickoff_returner_player_.
+ Name lateral_kickoff_returner_player_ is a duplicate.
+ Name forced_fumble_player_1_player_name truncated to forced_fumble_player_1_player_na.
+ Name forced_fumble_player_2_player_name truncated to forced_fumble_player_2_player_na.
+ Problems were detected with provided names.  See LOG. 
+ 81          /**********************************************************************
+ 82          *   PRODUCT:   SAS
+ 83          *   VERSION:   9.4
+ 84          *   CREATOR:   External File Interface
+ 85          *   DATE:      07MAY26
+ 86          *   DESC:      Generated SAS Datastep Code
+ 87          *   TEMPLATE SOURCE:  (None Specified.)
+ 88          ***********************************************************************/
+ 89             data WORK.PBP_2025    ;
+ 90             %let _EFIERR_ = 0; /* set the ERROR detection macro variable */
+ 91             infile '/home/u64427539/play_by_play_2025.csv' delimiter = ',' MISSOVER DSD lrecl=32767 firstobs=2 ;
+ 92                informat play_id best32. ;
+ 93                informat game_id $15. ;
+ 94                informat old_game_id best32. ;
+ 95                informat home_team $3. ;
+ 96                informat away_team $3. ;
+ 97                informat season_type $4. ;
+ 98                informat week best32. ;
+ 99                informat posteam $3. ;
+ 100               informat posteam_type $4. ;
+ 101               informat defteam $3. ;
+ 102               informat side_of_field $3. ;
+ 103               informat yardline_100 best32. ;
+ 104               informat game_date yymmdd10. ;
+ 105               informat quarter_seconds_remaining best32. ;
+ 106               informat half_seconds_remaining best32. ;
+ 107               informat game_seconds_remaining best32. ;
+ 108               informat game_half $8. ;
+ 109               informat quarter_end best32. ;
+ 110               informat drive best32. ;
+ 111               informat sp best32. ;
+ 112               informat qtr best32. ;
+ 113               informat down best32. ;
+ 114               informat goal_to_go best32. ;
+ 115               informat time time20.3 ;
+ 116               informat yrdln $6. ;
+ 117               informat ydstogo best32. ;
+ 118               informat ydsnet best32. ;
+ 119               informat desc $719. ;
+ 120               informat play_type $11. ;
+ 121               informat yards_gained best32. ;
+ 122               informat shotgun best32. ;
+ 123               informat no_huddle best32. ;
+ 124               informat qb_dropback best32. ;
+ 125               informat qb_kneel best32. ;
+ 126               informat qb_spike best32. ;
+ 127               informat qb_scramble best32. ;
+ 128               informat pass_length $5. ;
+ 129               informat pass_location $6. ;
+ 130               informat air_yards best32. ;
+ 131               informat yards_after_catch best32. ;
+ 132               informat run_location $6. ;
+ 133               informat run_gap $6. ;
+ 134               informat field_goal_result $7. ;
+ 135               informat kick_distance best32. ;
+ 136               informat extra_point_result $7. ;
+ 137               informat two_point_conv_result $7. ;
+ 138               informat home_timeouts_remaining best32. ;
+ 139               informat away_timeouts_remaining best32. ;
+ 140               informat timeout best32. ;
+ 141               informat timeout_team $3. ;
+ 142               informat td_team $3. ;
+ 143               informat td_player_name $18. ;
+ 144               informat td_player_id $10. ;
+ 145               informat posteam_timeouts_remaining best32. ;
+ 146               informat defteam_timeouts_remaining best32. ;
+ 147               informat total_home_score best32. ;
+ 148               informat total_away_score best32. ;
+ 149               informat posteam_score best32. ;
+ 150               informat defteam_score best32. ;
+ 151               informat score_differential best32. ;
+ 152               informat posteam_score_post best32. ;
+ 153               informat defteam_score_post best32. ;
+ 154               informat score_differential_post best32. ;
+ 155               informat no_score_prob best32. ;
+ 156               informat opp_fg_prob best32. ;
+ 157               informat opp_safety_prob best32. ;
+ 158               informat opp_td_prob best32. ;
+ 159               informat fg_prob best32. ;
+ 160               informat safety_prob best32. ;
+ 161               informat td_prob best32. ;
+ 162               informat extra_point_prob best32. ;
+ 163               informat two_point_conversion_prob best32. ;
+ 164               informat ep best32. ;
+ 165               informat epa best32. ;
+ 166               informat total_home_epa best32. ;
+ 167               informat total_away_epa best32. ;
+ 168               informat total_home_rush_epa best32. ;
+ 169               informat total_away_rush_epa best32. ;
+ 170               informat total_home_pass_epa best32. ;
+ 171               informat total_away_pass_epa best32. ;
+ 172               informat air_epa best32. ;
+ 173               informat yac_epa best32. ;
+ 174               informat comp_air_epa best32. ;
+ 175               informat comp_yac_epa best32. ;
+ 176               informat total_home_comp_air_epa best32. ;
+ 177               informat total_away_comp_air_epa best32. ;
+ 178               informat total_home_comp_yac_epa best32. ;
+ 179               informat total_away_comp_yac_epa best32. ;
+ 180               informat total_home_raw_air_epa best32. ;
+ 181               informat total_away_raw_air_epa best32. ;
+ 182               informat total_home_raw_yac_epa best32. ;
+ 183               informat total_away_raw_yac_epa best32. ;
+ 184               informat wp best32. ;
+ 185               informat def_wp best32. ;
+ 186               informat home_wp best32. ;
+ 187               informat away_wp best32. ;
+ 188               informat wpa best32. ;
+ 189               informat vegas_wpa best32. ;
+ 190               informat vegas_home_wpa best32. ;
+ 191               informat home_wp_post best32. ;
+ 192               informat away_wp_post best32. ;
+ 193               informat vegas_wp best32. ;
+ 194               informat vegas_home_wp best32. ;
+ 195               informat total_home_rush_wpa best32. ;
+ 196               informat total_away_rush_wpa best32. ;
+ 197               informat total_home_pass_wpa best32. ;
+ 198               informat total_away_pass_wpa best32. ;
+ 199               informat air_wpa best32. ;
+ 200               informat yac_wpa best32. ;
+ 201               informat comp_air_wpa best32. ;
+ 202               informat comp_yac_wpa best32. ;
+ 203               informat total_home_comp_air_wpa best32. ;
+ 204               informat total_away_comp_air_wpa best32. ;
+ 205               informat total_home_comp_yac_wpa best32. ;
+ 206               informat total_away_comp_yac_wpa best32. ;
+ 207               informat total_home_raw_air_wpa best32. ;
+ 208               informat total_away_raw_air_wpa best32. ;
+ 209               informat total_home_raw_yac_wpa best32. ;
+ 210               informat total_away_raw_yac_wpa best32. ;
+ 211               informat punt_blocked best32. ;
+ 212               informat first_down_rush best32. ;
+ 213               informat first_down_pass best32. ;
+ 214               informat first_down_penalty best32. ;
+ 215               informat third_down_converted best32. ;
+ 216               informat third_down_failed best32. ;
+ 217               informat fourth_down_converted best32. ;
+ 218               informat fourth_down_failed best32. ;
+ 219               informat incomplete_pass best32. ;
+ 220               informat touchback best32. ;
+ 221               informat interception best32. ;
+ 222               informat punt_inside_twenty best32. ;
+ 223               informat punt_in_endzone best32. ;
+ 224               informat punt_out_of_bounds best32. ;
+ 225               informat punt_downed best32. ;
+ 226               informat punt_fair_catch best32. ;
+ 227               informat kickoff_inside_twenty best32. ;
+ 228               informat kickoff_in_endzone best32. ;
+ 229               informat kickoff_out_of_bounds best32. ;
+ 230               informat kickoff_downed best32. ;
+ 231               informat kickoff_fair_catch best32. ;
+ 232               informat fumble_forced best32. ;
+ 233               informat fumble_not_forced best32. ;
+ 234               informat fumble_out_of_bounds best32. ;
+ 235               informat solo_tackle best32. ;
+ 236               informat safety best32. ;
+ 237               informat penalty best32. ;
+ 238               informat tackled_for_loss best32. ;
+ 239               informat fumble_lost best32. ;
+ 240               informat own_kickoff_recovery best32. ;
+ 241               informat own_kickoff_recovery_td best32. ;
+ 242               informat qb_hit best32. ;
+ 243               informat rush_attempt best32. ;
+ 244               informat pass_attempt best32. ;
+ 245               informat sack best32. ;
+ 246               informat touchdown best32. ;
+ 247               informat pass_touchdown best32. ;
+ 248               informat rush_touchdown best32. ;
+ 249               informat return_touchdown best32. ;
+ 250               informat extra_point_attempt best32. ;
+ 251               informat two_point_attempt best32. ;
+ 252               informat field_goal_attempt best32. ;
+ 253               informat kickoff_attempt best32. ;
+ 254               informat punt_attempt best32. ;
+ 255               informat fumble best32. ;
+ 256               informat complete_pass best32. ;
+ 257               informat assist_tackle best32. ;
+ 258               informat lateral_reception best32. ;
+ 259               informat lateral_rush best32. ;
+ 260               informat lateral_return best32. ;
+ 261               informat lateral_recovery best32. ;
+ 262               informat passer_player_id $10. ;
+ 263               informat passer_player_name $13. ;
+ 264               informat passing_yards best32. ;
+ 265               informat receiver_player_id $10. ;
+ 266               informat receiver_player_name $18. ;
+ 267               informat receiving_yards best32. ;
+ 268               informat rusher_player_id $10. ;
+ 269               informat rusher_player_name $17. ;
+ 270               informat rushing_yards best32. ;
+ 271               informat lateral_receiver_player_id $10. ;
+ 272               informat lateral_receiver_player_name $11. ;
+ 273               informat lateral_receiving_yards best32. ;
+ 274               informat lateral_rusher_player_id $10. ;
+ 275               informat lateral_rusher_player_name $7. ;
+ 276               informat lateral_rushing_yards best32. ;
+ 277               informat lateral_sack_player_id $1. ;
+ 278               informat lateral_sack_player_name $1. ;
+ 279               informat interception_player_id $10. ;
+ 280               informat interception_player_name $17. ;
+ 281               informat lateral_interception_player_id $10. ;
+ 282               informat lateral_interception_player_name $8. ;
+ 283               informat punt_returner_player_id $10. ;
+ 284               informat punt_returner_player_name $16. ;
+ 285               informat lateral_punt_returner_player_id $1. ;
+ 286               informat lateral_punt_returner_player_nam $1. ;
+ 287               informat kickoff_returner_player_name $16. ;
+ 288               informat kickoff_returner_player_id $10. ;
+ 289               informat lateral_kickoff_returner_player_ $1. ;
+ 290               informat VAR199 $1. ;
+ 291               informat punter_player_id $10. ;
+ 292               informat punter_player_name $12. ;
+ 293               informat kicker_player_name $12. ;
+ 294               informat kicker_player_id $10. ;
+ 295               informat own_kickoff_recovery_player_id $10. ;
+ 296               informat own_kickoff_recovery_player_name $12. ;
+ 297               informat blocked_player_id $10. ;
+ 298               informat blocked_player_name $11. ;
+ 299               informat tackle_for_loss_1_player_id $10. ;
+ 300               informat tackle_for_loss_1_player_name $18. ;
+ 301               informat tackle_for_loss_2_player_id $1. ;
+ 302               informat tackle_for_loss_2_player_name $1. ;
+ 303               informat qb_hit_1_player_id $10. ;
+ 304               informat qb_hit_1_player_name $18. ;
+ 305               informat qb_hit_2_player_id $10. ;
+ 306               informat qb_hit_2_player_name $13. ;
+ 307               informat forced_fumble_player_1_team $3. ;
+ 308               informat forced_fumble_player_1_player_id $10. ;
+ 309               informat forced_fumble_player_1_player_na $17. ;
+ 310               informat forced_fumble_player_2_team $3. ;
+ 311               informat forced_fumble_player_2_player_id $10. ;
+ 312               informat forced_fumble_player_2_player_na $11. ;
+ 313               informat solo_tackle_1_team $3. ;
+ 314               informat solo_tackle_2_team $3. ;
+ 315               informat solo_tackle_1_player_id $10. ;
+ 316               informat solo_tackle_2_player_id $10. ;
+ 317               informat solo_tackle_1_player_name $19. ;
+ 318               informat solo_tackle_2_player_name $13. ;
+ 319               informat assist_tackle_1_player_id $10. ;
+ 320               informat assist_tackle_1_player_name $19. ;
+ 321               informat assist_tackle_1_team $3. ;
+ 322               informat assist_tackle_2_player_id $10. ;
+ 323               informat assist_tackle_2_player_name $19. ;
+ 324               informat assist_tackle_2_team $3. ;
+ 325               informat assist_tackle_3_player_id $10. ;
+ 326               informat assist_tackle_3_player_name $12. ;
+ 327               informat assist_tackle_3_team $3. ;
+ 328               informat assist_tackle_4_player_id $10. ;
+ 329               informat assist_tackle_4_player_name $9. ;
+ 330               informat assist_tackle_4_team $3. ;
+ 331               informat tackle_with_assist best32. ;
+ 332               informat tackle_with_assist_1_player_id $10. ;
+ 333               informat tackle_with_assist_1_player_name $18. ;
+ 334               informat tackle_with_assist_1_team $3. ;
+ 335               informat tackle_with_assist_2_player_id $1. ;
+ 336               informat tackle_with_assist_2_player_name $1. ;
+ 337               informat tackle_with_assist_2_team $1. ;
+ 338               informat pass_defense_1_player_id $10. ;
+ 339               informat pass_defense_1_player_name $18. ;
+ 340               informat pass_defense_2_player_id $10. ;
+ 341               informat pass_defense_2_player_name $17. ;
+ 342               informat fumbled_1_team $3. ;
+ 343               informat fumbled_1_player_id $10. ;
+ 344               informat fumbled_1_player_name $18. ;
+ 345               informat fumbled_2_player_id $10. ;
+ 346               informat fumbled_2_player_name $10. ;
+ 347               informat fumbled_2_team $3. ;
+ 348               informat fumble_recovery_1_team $3. ;
+ 349               informat fumble_recovery_1_yards best32. ;
+ 350               informat fumble_recovery_1_player_id $10. ;
+ 351               informat fumble_recovery_1_player_name $18. ;
+ 352               informat fumble_recovery_2_team $3. ;
+ 353               informat fumble_recovery_2_yards best32. ;
+ 354               informat fumble_recovery_2_player_id $10. ;
+ 355               informat fumble_recovery_2_player_name $10. ;
+ 356               informat sack_player_id $10. ;
+ 357               informat sack_player_name $18. ;
+ 358               informat half_sack_1_player_id $10. ;
+ 359               informat half_sack_1_player_name $16. ;
+ 360               informat half_sack_2_player_id $10. ;
+ 361               informat half_sack_2_player_name $13. ;
+ 362               informat return_team $3. ;
+ 363               informat return_yards best32. ;
+ 364               informat penalty_team $3. ;
+ 365               informat penalty_player_id $10. ;
+ 366               informat penalty_player_name $18. ;
+ 367               informat penalty_yards best32. ;
+ 368               informat replay_or_challenge best32. ;
+ 369               informat replay_or_challenge_result $8. ;
+ 370               informat penalty_type $31. ;
+ 371               informat defensive_two_point_attempt best32. ;
+ 372               informat defensive_two_point_conv best32. ;
+ 373               informat defensive_extra_point_attempt best32. ;
+ 374               informat defensive_extra_point_conv best32. ;
+ 375               informat safety_player_name $14. ;
+ 376               informat safety_player_id $10. ;
+ 377               informat season best32. ;
+ 378               informat cp best32. ;
+ 379               informat cpoe best32. ;
+ 380               informat series best32. ;
+ 381               informat series_success best32. ;
+ 382               informat series_result $17. ;
+ 383               informat order_sequence best32. ;
+ 384               informat start_time $20. ;
+ 385               informat time_of_day B8601DZ35. ;
+ 386               informat stadium $31. ;
+ 387               informat weather $75. ;
+ 388               informat nfl_api_id $36. ;
+ 389               informat play_clock best32. ;
+ 390               informat play_deleted best32. ;
+ 391               informat play_type_nfl $28. ;
+ 392               informat special_teams_play best32. ;
+ 393               informat st_play_type $1. ;
+ 394               informat end_clock_time B8601DZ35. ;
+ 395               informat end_yard_line $1. ;
+ 396               informat fixed_drive best32. ;
+ 397               informat fixed_drive_result $17. ;
+ 398               informat drive_real_start_time B8601DZ35. ;
+ 399               informat drive_play_count best32. ;
+ 400               informat drive_time_of_possession time20.3 ;
+ 401               informat drive_first_downs best32. ;
+ 402               informat drive_inside20 best32. ;
+ 403               informat drive_ended_with_score best32. ;
+ 404               informat drive_quarter_start best32. ;
+ 405               informat drive_quarter_end best32. ;
+ 406               informat drive_yards_penalized best32. ;
+ 407               informat drive_start_transition $21. ;
+ 408               informat drive_end_transition $21. ;
+ 409               informat drive_game_clock_start time20.3 ;
+ 410               informat drive_game_clock_end time20.3 ;
+ 411               informat drive_start_yard_line $6. ;
+ 412               informat drive_end_yard_line $6. ;
+ 413               informat drive_play_id_started best32. ;
+ 414               informat drive_play_id_ended best32. ;
+ 415               informat away_score best32. ;
+ 416               informat home_score best32. ;
+ 417               informat location $7. ;
+ 418               informat result best32. ;
+ 419               informat total best32. ;
+ 420               informat spread_line best32. ;
+ 421               informat total_line best32. ;
+ 422               informat div_game best32. ;
+ 423               informat roof $8. ;
+ 424               informat surface $10. ;
+ 425               informat temp best32. ;
+ 426               informat wind best32. ;
+ 427               informat home_coach $20. ;
+ 428               informat away_coach $20. ;
+ 429               informat stadium_id $5. ;
+ 430               informat game_stadium $31. ;
+ 431               informat aborted_play best32. ;
+ 432               informat success best32. ;
+ 433               informat passer $13. ;
+ 434               informat passer_jersey_number best32. ;
+ 435               informat rusher $17. ;
+ 436               informat rusher_jersey_number best32. ;
+ 437               informat receiver $18. ;
+ 438               informat receiver_jersey_number best32. ;
+ 439               informat pass best32. ;
+ 440               informat rush best32. ;
+ 441               informat first_down best32. ;
+ 442               informat special best32. ;
+ 443               informat play best32. ;
+ 444               informat passer_id $10. ;
+ 445               informat rusher_id $10. ;
+ 446               informat receiver_id $10. ;
+ 447               informat name $17. ;
+ 448               informat jersey_number best32. ;
+ 449               informat id $10. ;
+ 450               informat fantasy_player_name $18. ;
+ 451               informat fantasy_player_id $10. ;
+ 452               informat fantasy $18. ;
+ 453               informat fantasy_id $10. ;
+ 454               informat out_of_bounds best32. ;
+ 455               informat home_opening_kickoff best32. ;
+ 456               informat qb_epa best32. ;
+ 457               informat xyac_epa best32. ;
+ 458               informat xyac_mean_yardage best32. ;
+ 459               informat xyac_median_yardage best32. ;
+ 460               informat xyac_success best32. ;
+ 461               informat xyac_fd best32. ;
+ 462               informat xpass best32. ;
+ 463               informat pass_oe best32. ;
+ 464               format play_id best12. ;
+ 465               format game_id $15. ;
+ 466               format old_game_id best12. ;
+ 467               format home_team $3. ;
+ 468               format away_team $3. ;
+ 469               format season_type $4. ;
+ 470               format week best12. ;
+ 471               format posteam $3. ;
+ 472               format posteam_type $4. ;
+ 473               format defteam $3. ;
+ 474               format side_of_field $3. ;
+ 475               format yardline_100 best12. ;
+ 476               format game_date yymmdd10. ;
+ 477               format quarter_seconds_remaining best12. ;
+ 478               format half_seconds_remaining best12. ;
+ 479               format game_seconds_remaining best12. ;
+ 480               format game_half $8. ;
+ 481               format quarter_end best12. ;
+ 482               format drive best12. ;
+ 483               format sp best12. ;
+ 484               format qtr best12. ;
+ 485               format down best12. ;
+ 486               format goal_to_go best12. ;
+ 487               format time time20.3 ;
+ 488               format yrdln $6. ;
+ 489               format ydstogo best12. ;
+ 490               format ydsnet best12. ;
+ 491               format desc $719. ;
+ 492               format play_type $11. ;
+ 493               format yards_gained best12. ;
+ 494               format shotgun best12. ;
+ 495               format no_huddle best12. ;
+ 496               format qb_dropback best12. ;
+ 497               format qb_kneel best12. ;
+ 498               format qb_spike best12. ;
+ 499               format qb_scramble best12. ;
+ 500               format pass_length $5. ;
+ 501               format pass_location $6. ;
+ 502               format air_yards best12. ;
+ 503               format yards_after_catch best12. ;
+ 504               format run_location $6. ;
+ 505               format run_gap $6. ;
+ 506               format field_goal_result $7. ;
+ 507               format kick_distance best12. ;
+ 508               format extra_point_result $7. ;
+ 509               format two_point_conv_result $7. ;
+ 510               format home_timeouts_remaining best12. ;
+ 511               format away_timeouts_remaining best12. ;
+ 512               format timeout best12. ;
+ 513               format timeout_team $3. ;
+ 514               format td_team $3. ;
+ 515               format td_player_name $18. ;
+ 516               format td_player_id $10. ;
+ 517               format posteam_timeouts_remaining best12. ;
+ 518               format defteam_timeouts_remaining best12. ;
+ 519               format total_home_score best12. ;
+ 520               format total_away_score best12. ;
+ 521               format posteam_score best12. ;
+ 522               format defteam_score best12. ;
+ 523               format score_differential best12. ;
+ 524               format posteam_score_post best12. ;
+ 525               format defteam_score_post best12. ;
+ 526               format score_differential_post best12. ;
+ 527               format no_score_prob best12. ;
+ 528               format opp_fg_prob best12. ;
+ 529               format opp_safety_prob best12. ;
+ 530               format opp_td_prob best12. ;
+ 531               format fg_prob best12. ;
+ 532               format safety_prob best12. ;
+ 533               format td_prob best12. ;
+ 534               format extra_point_prob best12. ;
+ 535               format two_point_conversion_prob best12. ;
+ 536               format ep best12. ;
+ 537               format epa best12. ;
+ 538               format total_home_epa best12. ;
+ 539               format total_away_epa best12. ;
+ 540               format total_home_rush_epa best12. ;
+ 541               format total_away_rush_epa best12. ;
+ 542               format total_home_pass_epa best12. ;
+ 543               format total_away_pass_epa best12. ;
+ 544               format air_epa best12. ;
+ 545               format yac_epa best12. ;
+ 546               format comp_air_epa best12. ;
+ 547               format comp_yac_epa best12. ;
+ 548               format total_home_comp_air_epa best12. ;
+ 549               format total_away_comp_air_epa best12. ;
+ 550               format total_home_comp_yac_epa best12. ;
+ 551               format total_away_comp_yac_epa best12. ;
+ 552               format total_home_raw_air_epa best12. ;
+ 553               format total_away_raw_air_epa best12. ;
+ 554               format total_home_raw_yac_epa best12. ;
+ 555               format total_away_raw_yac_epa best12. ;
+ 556               format wp best12. ;
+ 557               format def_wp best12. ;
+ 558               format home_wp best12. ;
+ 559               format away_wp best12. ;
+ 560               format wpa best12. ;
+ 561               format vegas_wpa best12. ;
+ 562               format vegas_home_wpa best12. ;
+ 563               format home_wp_post best12. ;
+ 564               format away_wp_post best12. ;
+ 565               format vegas_wp best12. ;
+ 566               format vegas_home_wp best12. ;
+ 567               format total_home_rush_wpa best12. ;
+ 568               format total_away_rush_wpa best12. ;
+ 569               format total_home_pass_wpa best12. ;
+ 570               format total_away_pass_wpa best12. ;
+ 571               format air_wpa best12. ;
+ 572               format yac_wpa best12. ;
+ 573               format comp_air_wpa best12. ;
+ 574               format comp_yac_wpa best12. ;
+ 575               format total_home_comp_air_wpa best12. ;
+ 576               format total_away_comp_air_wpa best12. ;
+ 577               format total_home_comp_yac_wpa best12. ;
+ 578               format total_away_comp_yac_wpa best12. ;
+ 579               format total_home_raw_air_wpa best12. ;
+ 580               format total_away_raw_air_wpa best12. ;
+ 581               format total_home_raw_yac_wpa best12. ;
+ 582               format total_away_raw_yac_wpa best12. ;
+ 583               format punt_blocked best12. ;
+ 584               format first_down_rush best12. ;
+ 585               format first_down_pass best12. ;
+ 586               format first_down_penalty best12. ;
+ 587               format third_down_converted best12. ;
+ 588               format third_down_failed best12. ;
+ 589               format fourth_down_converted best12. ;
+ 590               format fourth_down_failed best12. ;
+ 591               format incomplete_pass best12. ;
+ 592               format touchback best12. ;
+ 593               format interception best12. ;
+ 594               format punt_inside_twenty best12. ;
+ 595               format punt_in_endzone best12. ;
+ 596               format punt_out_of_bounds best12. ;
+ 597               format punt_downed best12. ;
+ 598               format punt_fair_catch best12. ;
+ 599               format kickoff_inside_twenty best12. ;
+ 600               format kickoff_in_endzone best12. ;
+ 601               format kickoff_out_of_bounds best12. ;
+ 602               format kickoff_downed best12. ;
+ 603               format kickoff_fair_catch best12. ;
+ 604               format fumble_forced best12. ;
+ 605               format fumble_not_forced best12. ;
+ 606               format fumble_out_of_bounds best12. ;
+ 607               format solo_tackle best12. ;
+ 608               format safety best12. ;
+ 609               format penalty best12. ;
+ 610               format tackled_for_loss best12. ;
+ 611               format fumble_lost best12. ;
+ 612               format own_kickoff_recovery best12. ;
+ 613               format own_kickoff_recovery_td best12. ;
+ 614               format qb_hit best12. ;
+ 615               format rush_attempt best12. ;
+ 616               format pass_attempt best12. ;
+ 617               format sack best12. ;
+ 618               format touchdown best12. ;
+ 619               format pass_touchdown best12. ;
+ 620               format rush_touchdown best12. ;
+ 621               format return_touchdown best12. ;
+ 622               format extra_point_attempt best12. ;
+ 623               format two_point_attempt best12. ;
+ 624               format field_goal_attempt best12. ;
+ 625               format kickoff_attempt best12. ;
+ 626               format punt_attempt best12. ;
+ 627               format fumble best12. ;
+ 628               format complete_pass best12. ;
+ 629               format assist_tackle best12. ;
+ 630               format lateral_reception best12. ;
+ 631               format lateral_rush best12. ;
+ 632               format lateral_return best12. ;
+ 633               format lateral_recovery best12. ;
+ 634               format passer_player_id $10. ;
+ 635               format passer_player_name $13. ;
+ 636               format passing_yards best12. ;
+ 637               format receiver_player_id $10. ;
+ 638               format receiver_player_name $18. ;
+ 639               format receiving_yards best12. ;
+ 640               format rusher_player_id $10. ;
+ 641               format rusher_player_name $17. ;
+ 642               format rushing_yards best12. ;
+ 643               format lateral_receiver_player_id $10. ;
+ 644               format lateral_receiver_player_name $11. ;
+ 645               format lateral_receiving_yards best12. ;
+ 646               format lateral_rusher_player_id $10. ;
+ 647               format lateral_rusher_player_name $7. ;
+ 648               format lateral_rushing_yards best12. ;
+ 649               format lateral_sack_player_id $1. ;
+ 650               format lateral_sack_player_name $1. ;
+ 651               format interception_player_id $10. ;
+ 652               format interception_player_name $17. ;
+ 653               format lateral_interception_player_id $10. ;
+ 654               format lateral_interception_player_name $8. ;
+ 655               format punt_returner_player_id $10. ;
+ 656               format punt_returner_player_name $16. ;
+ 657               format lateral_punt_returner_player_id $1. ;
+ 658               format lateral_punt_returner_player_nam $1. ;
+ 659               format kickoff_returner_player_name $16. ;
+ 660               format kickoff_returner_player_id $10. ;
+ 661               format lateral_kickoff_returner_player_ $1. ;
+ 662               format VAR199 $1. ;
+ 663               format punter_player_id $10. ;
+ 664               format punter_player_name $12. ;
+ 665               format kicker_player_name $12. ;
+ 666               format kicker_player_id $10. ;
+ 667               format own_kickoff_recovery_player_id $10. ;
+ 668               format own_kickoff_recovery_player_name $12. ;
+ 669               format blocked_player_id $10. ;
+ 670               format blocked_player_name $11. ;
+ 671               format tackle_for_loss_1_player_id $10. ;
+ 672               format tackle_for_loss_1_player_name $18. ;
+ 673               format tackle_for_loss_2_player_id $1. ;
+ 674               format tackle_for_loss_2_player_name $1. ;
+ 675               format qb_hit_1_player_id $10. ;
+ 676               format qb_hit_1_player_name $18. ;
+ 677               format qb_hit_2_player_id $10. ;
+ 678               format qb_hit_2_player_name $13. ;
+ 679               format forced_fumble_player_1_team $3. ;
+ 680               format forced_fumble_player_1_player_id $10. ;
+ 681               format forced_fumble_player_1_player_na $17. ;
+ 682               format forced_fumble_player_2_team $3. ;
+ 683               format forced_fumble_player_2_player_id $10. ;
+ 684               format forced_fumble_player_2_player_na $11. ;
+ 685               format solo_tackle_1_team $3. ;
+ 686               format solo_tackle_2_team $3. ;
+ 687               format solo_tackle_1_player_id $10. ;
+ 688               format solo_tackle_2_player_id $10. ;
+ 689               format solo_tackle_1_player_name $19. ;
+ 690               format solo_tackle_2_player_name $13. ;
+ 691               format assist_tackle_1_player_id $10. ;
+ 692               format assist_tackle_1_player_name $19. ;
+ 693               format assist_tackle_1_team $3. ;
+ 694               format assist_tackle_2_player_id $10. ;
+ 695               format assist_tackle_2_player_name $19. ;
+ 696               format assist_tackle_2_team $3. ;
+ 697               format assist_tackle_3_player_id $10. ;
+ 698               format assist_tackle_3_player_name $12. ;
+ 699               format assist_tackle_3_team $3. ;
+ 700               format assist_tackle_4_player_id $10. ;
+ 701               format assist_tackle_4_player_name $9. ;
+ 702               format assist_tackle_4_team $3. ;
+ 703               format tackle_with_assist best12. ;
+ 704               format tackle_with_assist_1_player_id $10. ;
+ 705               format tackle_with_assist_1_player_name $18. ;
+ 706               format tackle_with_assist_1_team $3. ;
+ 707               format tackle_with_assist_2_player_id $1. ;
+ 708               format tackle_with_assist_2_player_name $1. ;
+ 709               format tackle_with_assist_2_team $1. ;
+ 710               format pass_defense_1_player_id $10. ;
+ 711               format pass_defense_1_player_name $18. ;
+ 712               format pass_defense_2_player_id $10. ;
+ 713               format pass_defense_2_player_name $17. ;
+ 714               format fumbled_1_team $3. ;
+ 715               format fumbled_1_player_id $10. ;
+ 716               format fumbled_1_player_name $18. ;
+ 717               format fumbled_2_player_id $10. ;
+ 718               format fumbled_2_player_name $10. ;
+ 719               format fumbled_2_team $3. ;
+ 720               format fumble_recovery_1_team $3. ;
+ 721               format fumble_recovery_1_yards best12. ;
+ 722               format fumble_recovery_1_player_id $10. ;
+ 723               format fumble_recovery_1_player_name $18. ;
+ 724               format fumble_recovery_2_team $3. ;
+ 725               format fumble_recovery_2_yards best12. ;
+ 726               format fumble_recovery_2_player_id $10. ;
+ 727               format fumble_recovery_2_player_name $10. ;
+ 728               format sack_player_id $10. ;
+ 729               format sack_player_name $18. ;
+ 730               format half_sack_1_player_id $10. ;
+ 731               format half_sack_1_player_name $16. ;
+ 732               format half_sack_2_player_id $10. ;
+ 733               format half_sack_2_player_name $13. ;
+ 734               format return_team $3. ;
+ 735               format return_yards best12. ;
+ 736               format penalty_team $3. ;
+ 737               format penalty_player_id $10. ;
+ 738               format penalty_player_name $18. ;
+ 739               format penalty_yards best12. ;
+ 740               format replay_or_challenge best12. ;
+ 741               format replay_or_challenge_result $8. ;
+ 742               format penalty_type $31. ;
+ 743               format defensive_two_point_attempt best12. ;
+ 744               format defensive_two_point_conv best12. ;
+ 745               format defensive_extra_point_attempt best12. ;
+ 746               format defensive_extra_point_conv best12. ;
+ 747               format safety_player_name $14. ;
+ 748               format safety_player_id $10. ;
+ 749               format season best12. ;
+ 750               format cp best12. ;
+ 751               format cpoe best12. ;
+ 752               format series best12. ;
+ 753               format series_success best12. ;
+ 754               format series_result $17. ;
+ 755               format order_sequence best12. ;
+ 756               format start_time $20. ;
+ 757               format time_of_day B8601DZ35. ;
+ 758               format stadium $31. ;
+ 759               format weather $75. ;
+ 760               format nfl_api_id $36. ;
+ 761               format play_clock best12. ;
+ 762               format play_deleted best12. ;
+ 763               format play_type_nfl $28. ;
+ 764               format special_teams_play best12. ;
+ 765               format st_play_type $1. ;
+ 766               format end_clock_time B8601DZ35. ;
+ 767               format end_yard_line $1. ;
+ 768               format fixed_drive best12. ;
+ 769               format fixed_drive_result $17. ;
+ 770               format drive_real_start_time B8601DZ35. ;
+ 771               format drive_play_count best12. ;
+ 772               format drive_time_of_possession time20.3 ;
+ 773               format drive_first_downs best12. ;
+ 774               format drive_inside20 best12. ;
+ 775               format drive_ended_with_score best12. ;
+ 776               format drive_quarter_start best12. ;
+ 777               format drive_quarter_end best12. ;
+ 778               format drive_yards_penalized best12. ;
+ 779               format drive_start_transition $21. ;
+ 780               format drive_end_transition $21. ;
+ 781               format drive_game_clock_start time20.3 ;
+ 782               format drive_game_clock_end time20.3 ;
+ 783               format drive_start_yard_line $6. ;
+ 784               format drive_end_yard_line $6. ;
+ 785               format drive_play_id_started best12. ;
+ 786               format drive_play_id_ended best12. ;
+ 787               format away_score best12. ;
+ 788               format home_score best12. ;
+ 789               format location $7. ;
+ 790               format result best12. ;
+ 791               format total best12. ;
+ 792               format spread_line best12. ;
+ 793               format total_line best12. ;
+ 794               format div_game best12. ;
+ 795               format roof $8. ;
+ 796               format surface $10. ;
+ 797               format temp best12. ;
+ 798               format wind best12. ;
+ 799               format home_coach $20. ;
+ 800               format away_coach $20. ;
+ 801               format stadium_id $5. ;
+ 802               format game_stadium $31. ;
+ 803               format aborted_play best12. ;
+ 804               format success best12. ;
+ 805               format passer $13. ;
+ 806               format passer_jersey_number best12. ;
+ 807               format rusher $17. ;
+ 808               format rusher_jersey_number best12. ;
+ 809               format receiver $18. ;
+ 810               format receiver_jersey_number best12. ;
+ 811               format pass best12. ;
+ 812               format rush best12. ;
+ 813               format first_down best12. ;
+ 814               format special best12. ;
+ 815               format play best12. ;
+ 816               format passer_id $10. ;
+ 817               format rusher_id $10. ;
+ 818               format receiver_id $10. ;
+ 819               format name $17. ;
+ 820               format jersey_number best12. ;
+ 821               format id $10. ;
+ 822               format fantasy_player_name $18. ;
+ 823               format fantasy_player_id $10. ;
+ 824               format fantasy $18. ;
+ 825               format fantasy_id $10. ;
+ 826               format out_of_bounds best12. ;
+ 827               format home_opening_kickoff best12. ;
+ 828               format qb_epa best12. ;
+ 829               format xyac_epa best12. ;
+ 830               format xyac_mean_yardage best12. ;
+ 831               format xyac_median_yardage best12. ;
+ 832               format xyac_success best12. ;
+ 833               format xyac_fd best12. ;
+ 834               format xpass best12. ;
+ 835               format pass_oe best12. ;
+ 836            input
+ 837                        play_id
+ 838                        game_id  $
+ 839                        old_game_id
+ 840                        home_team  $
+ 841                        away_team  $
+ 842                        season_type  $
+ 843                        week
+ 844                        posteam  $
+ 845                        posteam_type  $
+ 846                        defteam  $
+ 847                        side_of_field  $
+ 848                        yardline_100
+ 849                        game_date
+ 850                        quarter_seconds_remaining
+ 851                        half_seconds_remaining
+ 852                        game_seconds_remaining
+ 853                        game_half  $
+ 854                        quarter_end
+ 855                        drive
+ 856                        sp
+ 857                        qtr
+ 858                        down
+ 859                        goal_to_go
+ 860                        time
+ 861                        yrdln  $
+ 862                        ydstogo
+ 863                        ydsnet
+ 864                        desc  $
+ 865                        play_type  $
+ 866                        yards_gained
+ 867                        shotgun
+ 868                        no_huddle
+ 869                        qb_dropback
+ 870                        qb_kneel
+ 871                        qb_spike
+ 872                        qb_scramble
+ 873                        pass_length  $
+ 874                        pass_location  $
+ 875                        air_yards
+ 876                        yards_after_catch
+ 877                        run_location  $
+ 878                        run_gap  $
+ 879                        field_goal_result  $
+ 880                        kick_distance
+ 881                        extra_point_result  $
+ 882                        two_point_conv_result  $
+ 883                        home_timeouts_remaining
+ 884                        away_timeouts_remaining
+ 885                        timeout
+ 886                        timeout_team  $
+ 887                        td_team  $
+ 888                        td_player_name  $
+ 889                        td_player_id  $
+ 890                        posteam_timeouts_remaining
+ 891                        defteam_timeouts_remaining
+ 892                        total_home_score
+ 893                        total_away_score
+ 894                        posteam_score
+ 895                        defteam_score
+ 896                        score_differential
+ 897                        posteam_score_post
+ 898                        defteam_score_post
+ 899                        score_differential_post
+ 900                        no_score_prob
+ 901                        opp_fg_prob
+ 902                        opp_safety_prob
+ 903                        opp_td_prob
+ 904                        fg_prob
+ 905                        safety_prob
+ 906                        td_prob
+ 907                        extra_point_prob
+ 908                        two_point_conversion_prob
+ 909                        ep
+ 910                        epa
+ 911                        total_home_epa
+ 912                        total_away_epa
+ 913                        total_home_rush_epa
+ 914                        total_away_rush_epa
+ 915                        total_home_pass_epa
+ 916                        total_away_pass_epa
+ 917                        air_epa
+ 918                        yac_epa
+ 919                        comp_air_epa
+ 920                        comp_yac_epa
+ 921                        total_home_comp_air_epa
+ 922                        total_away_comp_air_epa
+ 923                        total_home_comp_yac_epa
+ 924                        total_away_comp_yac_epa
+ 925                        total_home_raw_air_epa
+ 926                        total_away_raw_air_epa
+ 927                        total_home_raw_yac_epa
+ 928                        total_away_raw_yac_epa
+ 929                        wp
+ 930                        def_wp
+ 931                        home_wp
+ 932                        away_wp
+ 933                        wpa
+ 934                        vegas_wpa
+ 935                        vegas_home_wpa
+ 936                        home_wp_post
+ 937                        away_wp_post
+ 938                        vegas_wp
+ 939                        vegas_home_wp
+ 940                        total_home_rush_wpa
+ 941                        total_away_rush_wpa
+ 942                        total_home_pass_wpa
+ 943                        total_away_pass_wpa
+ 944                        air_wpa
+ 945                        yac_wpa
+ 946                        comp_air_wpa
+ 947                        comp_yac_wpa
+ 948                        total_home_comp_air_wpa
+ 949                        total_away_comp_air_wpa
+ 950                        total_home_comp_yac_wpa
+ 951                        total_away_comp_yac_wpa
+ 952                        total_home_raw_air_wpa
+ 953                        total_away_raw_air_wpa
+ 954                        total_home_raw_yac_wpa
+ 955                        total_away_raw_yac_wpa
+ 956                        punt_blocked
+ 957                        first_down_rush
+ 958                        first_down_pass
+ 959                        first_down_penalty
+ 960                        third_down_converted
+ 961                        third_down_failed
+ 962                        fourth_down_converted
+ 963                        fourth_down_failed
+ 964                        incomplete_pass
+ 965                        touchback
+ 966                        interception
+ 967                        punt_inside_twenty
+ 968                        punt_in_endzone
+ 969                        punt_out_of_bounds
+ 970                        punt_downed
+ 971                        punt_fair_catch
+ 972                        kickoff_inside_twenty
+ 973                        kickoff_in_endzone
+ 974                        kickoff_out_of_bounds
+ 975                        kickoff_downed
+ 976                        kickoff_fair_catch
+ 977                        fumble_forced
+ 978                        fumble_not_forced
+ 979                        fumble_out_of_bounds
+ 980                        solo_tackle
+ 981                        safety
+ 982                        penalty
+ 983                        tackled_for_loss
+ 984                        fumble_lost
+ 985                        own_kickoff_recovery
+ 986                        own_kickoff_recovery_td
+ 987                        qb_hit
+ 988                        rush_attempt
+ 989                        pass_attempt
+ 990                        sack
+ 991                        touchdown
+ 992                        pass_touchdown
+ 993                        rush_touchdown
+ 994                        return_touchdown
+ 995                        extra_point_attempt
+ 996                        two_point_attempt
+ 997                        field_goal_attempt
+ 998                        kickoff_attempt
+ 999                        punt_attempt
+ 1000                       fumble
+ 1001                       complete_pass
+ 1002                       assist_tackle
+ 1003                       lateral_reception
+ 1004                       lateral_rush
+ 1005                       lateral_return
+ 1006                       lateral_recovery
+ 1007                       passer_player_id  $
+ 1008                       passer_player_name  $
+ 1009                       passing_yards
+ 1010                       receiver_player_id  $
+ 1011                       receiver_player_name  $
+ 1012                       receiving_yards
+ 1013                       rusher_player_id  $
+ 1014                       rusher_player_name  $
+ 1015                       rushing_yards
+ 1016                       lateral_receiver_player_id  $
+ 1017                       lateral_receiver_player_name  $
+ 1018                       lateral_receiving_yards
+ 1019                       lateral_rusher_player_id  $
+ 1020                       lateral_rusher_player_name  $
+ 1021                       lateral_rushing_yards
+ 1022                       lateral_sack_player_id  $
+ 1023                       lateral_sack_player_name  $
+ 1024                       interception_player_id  $
+ 1025                       interception_player_name  $
+ 1026                       lateral_interception_player_id  $
+ 1027                       lateral_interception_player_name  $
+ 1028                       punt_returner_player_id  $
+ 1029                       punt_returner_player_name  $
+ 1030                       lateral_punt_returner_player_id  $
+ 1031                       lateral_punt_returner_player_nam  $
+ 1032                       kickoff_returner_player_name  $
+ 1033                       kickoff_returner_player_id  $
+ 1034                       lateral_kickoff_returner_player_  $
+ 1035                       VAR199  $
+ 1036                       punter_player_id  $
+ 1037                       punter_player_name  $
+ 1038                       kicker_player_name  $
+ 1039                       kicker_player_id  $
+ 1040                       own_kickoff_recovery_player_id  $
+ 1041                       own_kickoff_recovery_player_name  $
+ 1042                       blocked_player_id  $
+ 1043                       blocked_player_name  $
+ 1044                       tackle_for_loss_1_player_id  $
+ 1045                       tackle_for_loss_1_player_name  $
+ 1046                       tackle_for_loss_2_player_id  $
+ 1047                       tackle_for_loss_2_player_name  $
+ 1048                       qb_hit_1_player_id  $
+ 1049                       qb_hit_1_player_name  $
+ 1050                       qb_hit_2_player_id  $
+ 1051                       qb_hit_2_player_name  $
+ 1052                       forced_fumble_player_1_team  $
+ 1053                       forced_fumble_player_1_player_id  $
+ 1054                       forced_fumble_player_1_player_na  $
+ 1055                       forced_fumble_player_2_team  $
+ 1056                       forced_fumble_player_2_player_id  $
+ 1057                       forced_fumble_player_2_player_na  $
+ 1058                       solo_tackle_1_team  $
+ 1059                       solo_tackle_2_team  $
+ 1060                       solo_tackle_1_player_id  $
+ 1061                       solo_tackle_2_player_id  $
+ 1062                       solo_tackle_1_player_name  $
+ 1063                       solo_tackle_2_player_name  $
+ 1064                       assist_tackle_1_player_id  $
+ 1065                       assist_tackle_1_player_name  $
+ 1066                       assist_tackle_1_team  $
+ 1067                       assist_tackle_2_player_id  $
+ 1068                       assist_tackle_2_player_name  $
+ 1069                       assist_tackle_2_team  $
+ 1070                       assist_tackle_3_player_id  $
+ 1071                       assist_tackle_3_player_name  $
+ 1072                       assist_tackle_3_team  $
+ 1073                       assist_tackle_4_player_id  $
+ 1074                       assist_tackle_4_player_name  $
+ 1075                       assist_tackle_4_team  $
+ 1076                       tackle_with_assist
+ 1077                       tackle_with_assist_1_player_id  $
+ 1078                       tackle_with_assist_1_player_name  $
+ 1079                       tackle_with_assist_1_team  $
+ 1080                       tackle_with_assist_2_player_id  $
+ 1081                       tackle_with_assist_2_player_name  $
+ 1082                       tackle_with_assist_2_team  $
+ 1083                       pass_defense_1_player_id  $
+ 1084                       pass_defense_1_player_name  $
+ 1085                       pass_defense_2_player_id  $
+ 1086                       pass_defense_2_player_name  $
+ 1087                       fumbled_1_team  $
+ 1088                       fumbled_1_player_id  $
+ 1089                       fumbled_1_player_name  $
+ 1090                       fumbled_2_player_id  $
+ 1091                       fumbled_2_player_name  $
+ 1092                       fumbled_2_team  $
+ 1093                       fumble_recovery_1_team  $
+ 1094                       fumble_recovery_1_yards
+ 1095                       fumble_recovery_1_player_id  $
+ 1096                       fumble_recovery_1_player_name  $
+ 1097                       fumble_recovery_2_team  $
+ 1098                       fumble_recovery_2_yards
+ 1099                       fumble_recovery_2_player_id  $
+ 1100                       fumble_recovery_2_player_name  $
+ 1101                       sack_player_id  $
+ 1102                       sack_player_name  $
+ 1103                       half_sack_1_player_id  $
+ 1104                       half_sack_1_player_name  $
+ 1105                       half_sack_2_player_id  $
+ 1106                       half_sack_2_player_name  $
+ 1107                       return_team  $
+ 1108                       return_yards
+ 1109                       penalty_team  $
+ 1110                       penalty_player_id  $
+ 1111                       penalty_player_name  $
+ 1112                       penalty_yards
+ 1113                       replay_or_challenge
+ 1114                       replay_or_challenge_result  $
+ 1115                       penalty_type  $
+ 1116                       defensive_two_point_attempt
+ 1117                       defensive_two_point_conv
+ 1118                       defensive_extra_point_attempt
+ 1119                       defensive_extra_point_conv
+ 1120                       safety_player_name  $
+ 1121                       safety_player_id  $
+ 1122                       season
+ 1123                       cp
+ 1124                       cpoe
+ 1125                       series
+ 1126                       series_success
+ 1127                       series_result  $
+ 1128                       order_sequence
+ 1129                       start_time  $
+ 1130                       time_of_day
+ 1131                       stadium  $
+ 1132                       weather  $
+ 1133                       nfl_api_id  $
+ 1134                       play_clock
+ 1135                       play_deleted
+ 1136                       play_type_nfl  $
+ 1137                       special_teams_play
+ 1138                       st_play_type  $
+ 1139                       end_clock_time
+ 1140                       end_yard_line  $
+ 1141                       fixed_drive
+ 1142                       fixed_drive_result  $
+ 1143                       drive_real_start_time
+ 1144                       drive_play_count
+ 1145                       drive_time_of_possession
+ 1146                       drive_first_downs
+ 1147                       drive_inside20
+ 1148                       drive_ended_with_score
+ 1149                       drive_quarter_start
+ 1150                       drive_quarter_end
+ 1151                       drive_yards_penalized
+ 1152                       drive_start_transition  $
+ 1153                       drive_end_transition  $
+ 1154                       drive_game_clock_start
+ 1155                       drive_game_clock_end
+ 1156                       drive_start_yard_line  $
+ 1157                       drive_end_yard_line  $
+ 1158                       drive_play_id_started
+ 1159                       drive_play_id_ended
+ 1160                       away_score
+ 1161                       home_score
+ 1162                       location  $
+ 1163                       result
+ 1164                       total
+ 1165                       spread_line
+ 1166                       total_line
+ 1167                       div_game
+ 1168                       roof  $
+ 1169                       surface  $
+ 1170                       temp
+ 1171                       wind
+ 1172                       home_coach  $
+ 1173                       away_coach  $
+ 1174                       stadium_id  $
+ 1175                       game_stadium  $
+ 1176                       aborted_play
+ 1177                       success
+ 1178                       passer  $
+ 1179                       passer_jersey_number
+ 1180                       rusher  $
+ 1181                       rusher_jersey_number
+ 1182                       receiver  $
+ 1183                       receiver_jersey_number
+ 1184                       pass
+ 1185                       rush
+ 1186                       first_down
+ 1187                       special
+ 1188                       play
+ 1189                       passer_id  $
+ 1190                       rusher_id  $
+ 1191                       receiver_id  $
+ 1192                       name  $
+ 1193                       jersey_number
+ 1194                       id  $
+ 1195                       fantasy_player_name  $
+ 1196                       fantasy_player_id  $
+ 1197                       fantasy  $
+ 1198                       fantasy_id  $
+ 1199                       out_of_bounds
+ 1200                       home_opening_kickoff
+ 1201                       qb_epa
+ 1202                       xyac_epa
+ 1203                       xyac_mean_yardage
+ 1204                       xyac_median_yardage
+ 1205                       xyac_success
+ 1206                       xyac_fd
+ 1207                       xpass
+ 1208                       pass_oe
+ 1209           ;
+ 1210           if _ERROR_ then call symputx('_EFIERR_',1);  /* set ERROR detection macro variable */
+ 1211           run;
+ 
+ NOTE: The infile '/home/u64427539/play_by_play_2025.csv' is:
+       Filename=/home/u64427539/play_by_play_2025.csv,
+       Owner Name=u64427539,Group Name=oda,
+       Access Permission=-rw-r--r--,
+       Last Modified=05May2026:15:13:53,
+       File Size (bytes)=97951841
+ 
+ NOTE: 48771 records were read from the infile '/home/u64427539/play_by_play_2025.csv'.
+       The minimum record length was 815.
+       The maximum record length was 2741.
+ NOTE: The data set WORK.PBP_2025 has 48771 observations and 372 variables.
+ NOTE: DATA statement used (Total process time):
+       real time           1.19 seconds
+       user cpu time       1.05 seconds
+       system cpu time     0.11 seconds
+       memory              12843.21k
+       OS Memory           37928.00k
+       Timestamp           05/07/2026 04:45:23 PM
+       Step Count                        43  Switch Count  2
+       Page Faults                       0
+       Page Reclaims                     410
+       Page Swaps                        0
+       Voluntary Context Switches        17
+       Involuntary Context Switches      3
+       Block Input Operations            0
+       Block Output Operations           403064
+       
+ 
+ 48771 rows created in WORK.PBP_2025 from /home/u64427539/play_by_play_2025.csv.
+   
+   
+   
+ NOTE: WORK.PBP_2025 data set was successfully created.
+ NOTE: The data set WORK.PBP_2025 has 48771 observations and 372 variables.
+ NOTE: PROCEDURE IMPORT used (Total process time):
+       real time           5:15.19
+       user cpu time       5:11.96
+       system cpu time     0.64 seconds
+       memory              12843.21k
+       OS Memory           38184.00k
+       Timestamp           05/07/2026 04:45:23 PM
+       Step Count                        43  Switch Count  17
+       Page Faults                       0
+       Page Reclaims                     2071
+       Page Swaps                        0
+       Voluntary Context Switches        160
+       Involuntary Context Switches      1321
+       Block Input Operations            0
+       Block Output Operations           403176
+       
+ 
+ 1212       
+ 1213       /* Step 2: Filter to my assigned teams and 4th down plays */
+ 1214       DATA work.fourth_down_clean;
+ 1215           SET work.pbp_2025;
+ 1216           WHERE posteam IN ('ARI', 'BUF', 'CHI', 'CIN', 'CLE', 'DAL', 'DEN',
+ 1217                             'HOU', 'IND', 'JAX', 'KC', 'LA', 'NE', 'NO',
+ 1218                             'NYJ', 'PHI', 'PIT', 'SF', 'TB', 'TEN')
+ 1219                 AND down = 4;
+ 1220       RUN;
+ 
+ NOTE: There were 2737 observations read from the data set WORK.PBP_2025.
+       WHERE posteam in ('ARI', 'BUF', 'CHI', 'CIN', 'CLE', 'DAL', 'DEN', 'HOU', 'IND', 'JAX', 'KC', 'LA', 'NE', 'NO', 'NYJ', 'PHI', 
+       'PIT', 'SF', 'TB', 'TEN') and (down=4);
+ NOTE: The data set WORK.FOURTH_DOWN_CLEAN has 2737 observations and 372 variables.
+ NOTE: DATA statement used (Total process time):
+       real time           0.05 seconds
+       user cpu time       0.01 seconds
+       system cpu time     0.04 seconds
+       memory              4035.46k
+       OS Memory           33968.00k
+       Timestamp           05/07/2026 04:45:23 PM
+       Step Count                        44  Switch Count  5
+       Page Faults                       0
+       Page Reclaims                     516
+       Page Swaps                        0
+       Voluntary Context Switches        19
+       Involuntary Context Switches      2
+       Block Input Operations            0
+       Block Output Operations           22800
+       
+ 
+ 1221       
+ 1222       /* Step 3: Create binary response variable go_for_it */
+ 1223       DATA work.fourth_down_model;
+ 1224           SET work.fourth_down_clean;
+ 1225           IF play_type IN ('run', 'pass') THEN go_for_it = 1;
+ 1226           ELSE IF play_type IN ('punt', 'field_goal') THEN go_for_it = 0;
+ 1227           ELSE go_for_it = .;
+ 1228       RUN;
+ 
+ NOTE: There were 2737 observations read from the data set WORK.FOURTH_DOWN_CLEAN.
+ NOTE: The data set WORK.FOURTH_DOWN_MODEL has 2737 observations and 373 variables.
+ NOTE: DATA statement used (Total process time):
+       real time           0.01 seconds
+       user cpu time       0.00 seconds
+       system cpu time     0.01 seconds
+       memory              4165.68k
+       OS Memory           33456.00k
+       Timestamp           05/07/2026 04:45:23 PM
+       Step Count                        45  Switch Count  3
+       Page Faults                       0
+       Page Reclaims                     494
+       Page Swaps                        0
+       Voluntary Context Switches        15
+       Involuntary Context Switches      0
+       Block Input Operations            0
+       Block Output Operations           22792
+       
+ 
+ 1229       
+ 1230       /* Step 4: Drop rows where go_for_it is missing */
+ 1231       DATA work.fourth_down_model;
+ 1232           SET work.fourth_down_model;
+ 1233           IF go_for_it = . THEN DELETE;
+ 1234       RUN;
+ 
+ NOTE: There were 2737 observations read from the data set WORK.FOURTH_DOWN_MODEL.
+ NOTE: The data set WORK.FOURTH_DOWN_MODEL has 2555 observations and 373 variables.
+ NOTE: DATA statement used (Total process time):
+       real time           0.01 seconds
+       user cpu time       0.01 seconds
+       system cpu time     0.01 seconds
+       memory              4161.68k
+       OS Memory           33200.00k
+       Timestamp           05/07/2026 04:45:23 PM
+       Step Count                        46  Switch Count  3
+       Page Faults                       0
+       Page Reclaims                     493
+       Page Swaps                        0
+       Voluntary Context Switches        17
+       Involuntary Context Switches      0
+       Block Input Operations            0
+       Block Output Operations           21256
+       
+ 
+ 1235       
+ 1236       
+ 1237       /* Step 5: Check missing values for candidate predictors */
+ 1238       PROC MEANS DATA=work.fourth_down_model N NMISS;
+ 1239           VAR ydstogo yardline_100 score_differential
+ 1240               game_seconds_remaining half_seconds_remaining
+ 1241               wp posteam_timeouts_remaining defteam_timeouts_remaining qtr;
+ 1242       RUN;
+ 
+ NOTE: There were 2555 observations read from the data set WORK.FOURTH_DOWN_MODEL.
+ NOTE: PROCEDURE MEANS used (Total process time):
+       real time           0.02 seconds
+       user cpu time       0.02 seconds
+       system cpu time     0.00 seconds
+       memory              8253.75k
+       OS Memory           36544.00k
+       Timestamp           05/07/2026 04:45:23 PM
+       Step Count                        47  Switch Count  2
+       Page Faults                       0
+       Page Reclaims                     1572
+       Page Swaps                        0
+       Voluntary Context Switches        28
+       Involuntary Context Switches      1
+       Block Input Operations            0
+       Block Output Operations           8
+       
+ 
+ 1243       
+ 1244       
+ 1245       /* Step 6: Frequency table for response variable */
+ 1246       PROC FREQ DATA=work.fourth_down_model;
+ 1247           TABLES go_for_it;
+ 1248       RUN;
+ 
+ NOTE: There were 2555 observations read from the data set WORK.FOURTH_DOWN_MODEL.
+ NOTE: PROCEDURE FREQ used (Total process time):
+       real time           0.01 seconds
+       user cpu time       0.01 seconds
+       system cpu time     0.01 seconds
+       memory              2274.37k
+       OS Memory           31664.00k
+       Timestamp           05/07/2026 04:45:23 PM
+       Step Count                        48  Switch Count  3
+       Page Faults                       0
+       Page Reclaims                     311
+       Page Swaps                        0
+       Voluntary Context Switches        23
+       Involuntary Context Switches      1
+       Block Input Operations            0
+       Block Output Operations           264
+       
+ 
+ 1249       
+ 1250       
+ 1251       /* Step 7: Frequency tables for categorical predictors */
+ 1252       PROC FREQ DATA=work.fourth_down_model;
+ 1253           TABLES qtr posteam_timeouts_remaining defteam_timeouts_remaining;
+ 1254       RUN;
+ 
+ NOTE: There were 2555 observations read from the data set WORK.FOURTH_DOWN_MODEL.
+ NOTE: PROCEDURE FREQ used (Total process time):
+       real time           0.02 seconds
+       user cpu time       0.02 seconds
+       system cpu time     0.00 seconds
+       memory              2286.84k
+       OS Memory           31664.00k
+       Timestamp           05/07/2026 04:45:23 PM
+       Step Count                        49  Switch Count  3
+       Page Faults                       0
+       Page Reclaims                     311
+       Page Swaps                        0
+       Voluntary Context Switches        19
+       Involuntary Context Switches      1
+       Block Input Operations            0
+       Block Output Operations           264
+       
+ 
+ 1255       
+ 1256       
+ 1257       /* Step 8: Summary statistics for continuous predictors */
+ 1258       PROC MEANS DATA=work.fourth_down_model
+ 1259                  N MEAN STD MIN MAX MEDIAN;
+ 1260           VAR ydstogo yardline_100 score_differential
+ 1261               game_seconds_remaining half_seconds_remaining;
+ 1262       RUN;
+ 
+ NOTE: There were 2555 observations read from the data set WORK.FOURTH_DOWN_MODEL.
+ NOTE: PROCEDURE MEANS used (Total process time):
+       real time           0.03 seconds
+       user cpu time       0.03 seconds
+       system cpu time     0.00 seconds
+       memory              7961.15k
+       OS Memory           36544.00k
+       Timestamp           05/07/2026 04:45:23 PM
+       Step Count                        50  Switch Count  2
+       Page Faults                       0
+       Page Reclaims                     1582
+       Page Swaps                        0
+       Voluntary Context Switches        25
+       Involuntary Context Switches      3
+       Block Input Operations            0
+       Block Output Operations           24
+       
+ 
+ 1263       
+ 1264       
+ 1265       /* Step 9: Cross-tabulations with Chi-Square and Cramer's V */
+ 1266       PROC FREQ DATA=work.fourth_down_model;
+ 1267           TABLES qtr*go_for_it / CHISQ;
+ 1268           TABLES posteam_timeouts_remaining*go_for_it / CHISQ;
+ 1269       RUN;
+ 
+ NOTE: There were 2555 observations read from the data set WORK.FOURTH_DOWN_MODEL.
+ NOTE: PROCEDURE FREQ used (Total process time):
+       real time           0.06 seconds
+       user cpu time       0.06 seconds
+       system cpu time     0.01 seconds
+       memory              2752.71k
+       OS Memory           31924.00k
+       Timestamp           05/07/2026 04:45:23 PM
+       Step Count                        51  Switch Count  5
+       Page Faults                       0
+       Page Reclaims                     376
+       Page Swaps                        0
+       Voluntary Context Switches        34
+       Involuntary Context Switches      4
+       Block Input Operations            0
+       Block Output Operations           544
+       
+ 
+ 1270       
+ 1271       /* Step 10: Odds Ratio - Early quarters (1-3) vs Late (4-5) */
+ 1272       DATA work.fourth_down_or;
+ 1273           SET work.fourth_down_model;
+ 1274           IF qtr IN (1,2,3) THEN qtr_group = 'Early (Q1-Q3)';
+ 1275           ELSE IF qtr IN (4,5) THEN qtr_group = 'Late (Q4-Q5)';
+ 1276       RUN;
+ 
+ NOTE: There were 2555 observations read from the data set WORK.FOURTH_DOWN_MODEL.
+ NOTE: The data set WORK.FOURTH_DOWN_OR has 2555 observations and 374 variables.
+ NOTE: DATA statement used (Total process time):
+       real time           0.01 seconds
+       user cpu time       0.01 seconds
+       system cpu time     0.00 seconds
+       memory              4161.71k
+       OS Memory           33200.00k
+       Timestamp           05/07/2026 04:45:23 PM
+       Step Count                        52  Switch Count  3
+       Page Faults                       0
+       Page Reclaims                     494
+       Page Swaps                        0
+       Voluntary Context Switches        19
+       Involuntary Context Switches      0
+       Block Input Operations            0
+       Block Output Operations           21256
+       
+ 
+ 1277       
+ 1278       PROC FREQ DATA=work.fourth_down_or;
+ 1279           TABLES qtr_group*go_for_it / CHISQ RELRISK;
+ 1280       RUN;
+ 
+ NOTE: There were 2555 observations read from the data set WORK.FOURTH_DOWN_OR.
+ NOTE: PROCEDURE FREQ used (Total process time):
+       real time           0.04 seconds
+       user cpu time       0.04 seconds
+       system cpu time     0.01 seconds
+       memory              2684.75k
+       OS Memory           31924.00k
+       Timestamp           05/07/2026 04:45:23 PM
+       Step Count                        53  Switch Count  5
+       Page Faults                       0
+       Page Reclaims                     377
+       Page Swaps                        0
+       Voluntary Context Switches        32
+       Involuntary Context Switches      3
+       Block Input Operations            0
+       Block Output Operations           544
+       
+ 
+ 1281       
+ 1282       
+ 1283       /* Step 11: Bar chart - Go-for-it rate by quarter */
+ 1284       PROC SGPLOT DATA=work.fourth_down_or;
+ 1285           VBAR qtr_group / GROUP=go_for_it
+ 1286                            GROUPDISPLAY=CLUSTER
+ 1287                            DATALABEL;
+ 1288           XAXIS LABEL="Quarter Group";
+ 1289           YAXIS LABEL="Frequency";
+ 1290           KEYLEGEND / TITLE="Decision (0=Kick, 1=Go For It)";
+ 1291           TITLE "Fourth Down Decision by Quarter Group";
+ 1292       RUN;
+ 
+ NOTE: PROCEDURE SGPLOT used (Total process time):
+       real time           0.09 seconds
+       user cpu time       0.03 seconds
+       system cpu time     0.01 seconds
+       memory              9452.90k
+       OS Memory           36404.00k
+       Timestamp           05/07/2026 04:45:23 PM
+       Step Count                        54  Switch Count  4
+       Page Faults                       0
+       Page Reclaims                     1719
+       Page Swaps                        0
+       Voluntary Context Switches        178
+       Involuntary Context Switches      5
+       Block Input Operations            0
+       Block Output Operations           624
+       
+ NOTE: There were 2555 observations read from the data set WORK.FOURTH_DOWN_OR.
+ 
+ 1293       
+ 1294       /* Step 12: Logistic Regression Model */
+ 1295       PROC LOGISTIC DATA=work.fourth_down_model DESCENDING PLOTS=ROC;
+ 1296           CLASS qtr (PARAM=REF REF='1')
+ 1297                 posteam_timeouts_remaining (PARAM=REF REF='3')
+ 1298                 defteam_timeouts_remaining (PARAM=REF REF='3');
+ 1299           MODEL go_for_it = ydstogo yardline_100 score_differential
+ 1300                             game_seconds_remaining
+ 1301                             posteam_timeouts_remaining
+ 1302                             defteam_timeouts_remaining
+ 1303                             qtr / CTABLE LACKFIT;
+ 1304           TITLE "Logistic Regression: Fourth Down Decision Model";
+ 1305       RUN;
+ 
+ NOTE: PROC LOGISTIC is modeling the probability that go_for_it=1.
+ NOTE: Convergence criterion (GCONV=1E-8) satisfied.
+ NOTE: There were 2555 observations read from the data set WORK.FOURTH_DOWN_MODEL.
+ NOTE: PROCEDURE LOGISTIC used (Total process time):
+       real time           1.20 seconds
+       user cpu time       0.40 seconds
+       system cpu time     0.15 seconds
+       memory              10655.25k
+       OS Memory           43848.00k
+       Timestamp           05/07/2026 04:45:25 PM
+       Step Count                        55  Switch Count  33
+       Page Faults                       0
+       Page Reclaims                     3494
+       Page Swaps                        0
+       Voluntary Context Switches        39005
+       Involuntary Context Switches      18
+       Block Input Operations            0
+       Block Output Operations           6104
+       
+ 
+ 1306       
+ 1307       /* Step 13: Model Refinement - Stepwise Selection */
+ 1308       PROC LOGISTIC DATA=work.fourth_down_model DESCENDING;
+ 1309           CLASS qtr (PARAM=REF REF='1')
+ 1310                 posteam_timeouts_remaining (PARAM=REF REF='3')
+ 1311                 defteam_timeouts_remaining (PARAM=REF REF='3');
+ 1312           MODEL go_for_it = ydstogo yardline_100 score_differential
+ 1313                             game_seconds_remaining
+ 1314                             posteam_timeouts_remaining
+ 1315                             defteam_timeouts_remaining
+ 1316                             qtr / SELECTION=STEPWISE
+ 1317                                   SLENTRY=0.05
+ 1318                                   SLSTAY=0.05
+ 1319                                   CTABLE;
+ 1320           TITLE "Refined Model - Stepwise Selection";
+ 1321       RUN;
+ 
+ NOTE: PROC LOGISTIC is modeling the probability that go_for_it=1.
+ NOTE: Convergence criterion (GCONV=1E-8) satisfied in Step 0.
+ NOTE: Convergence criterion (GCONV=1E-8) satisfied in Step 1.
+ NOTE: Convergence criterion (GCONV=1E-8) satisfied in Step 2.
+ NOTE: Convergence criterion (GCONV=1E-8) satisfied in Step 3.
+ NOTE: Convergence criterion (GCONV=1E-8) satisfied in Step 4.
+ NOTE: Convergence criterion (GCONV=1E-8) satisfied in Step 5.
+ NOTE: Convergence criterion (GCONV=1E-8) satisfied in Step 6.
+ NOTE: There were 2555 observations read from the data set WORK.FOURTH_DOWN_MODEL.
+ NOTE: PROCEDURE LOGISTIC used (Total process time):
+       real time           0.37 seconds
+       user cpu time       0.35 seconds
+       system cpu time     0.03 seconds
+       memory              4150.37k
+       OS Memory           39956.00k
+       Timestamp           05/07/2026 04:45:25 PM
+       Step Count                        56  Switch Count  17
+       Page Faults                       0
+       Page Reclaims                     536
+       Page Swaps                        0
+       Voluntary Context Switches        75
+       Involuntary Context Switches      6
+       Block Input Operations            0
+       Block Output Operations           152
+       
+ 
+ 1322       
+ 1323       OPTIONS NONOTES NOSTIMER NOSOURCE NOSYNTAXCHECK;
+ 1333       
