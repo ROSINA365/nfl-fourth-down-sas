@@ -18,7 +18,7 @@ On fourth down, an NFL team chooses between **going for it** (run or pass) and *
 | Quarter | Teams went for it on 35.1% of 4th-quarter fourth downs, compared with 17.8% in the 1st |
 | Model performance | **AUC 0.882**, 84.5% of decisions classified correctly |
 
-![Fourth down decisions by quarter](images/quarter_chart.png)
+![Fourth down decisions by quarter](quarter_chart.png)
 
 ---
 
@@ -71,7 +71,7 @@ The raw CSV is not stored in this repository because of its size. Download `play
 
 Stepwise selection removed the defense's timeouts, which were not significant. The refined model is simpler with no loss in accuracy.
 
-![ROC curve, AUC 0.882](images/roc_curve.png)
+![ROC curve, AUC 0.882](roc_curve.png)
 
 ---
 
@@ -95,21 +95,22 @@ Stepwise selection removed the defense's timeouts, which were not significant. T
 
 | File | Description |
 |---|---|
-| `NFL_Fourth_Down_Analysis.sas` | SAS code for import, cleaning, analysis and modeling |
-| `NFL_Fourth_Down_Report.docx` | Full written report with tables and interpretation |
-| `NFL_Fourth_Down_Presentation.pdf` | 9-slide summary presentation |
-| `images/` | Bar chart by quarter and ROC curve from SAS |
+| SAS code (`.sas`) | Code for import, cleaning, analysis and modeling |
+| SAS log (`.log`) | Log from running the code, showing it ran without errors |
+| Report (`.docx`) | Full written report with tables and interpretation |
+| Presentation (`.pdf`) | 9-slide summary presentation |
+| `quarter_chart.png`, `roc_curve.png` | Charts produced in SAS |
 
 ## How to run
 
 1. Download `play_by_play_2025.csv` from NFLverse (link above).
 2. Upload it to SAS OnDemand for Academics or your SAS environment.
-3. In `NFL_Fourth_Down_Analysis.sas`, change the `DATAFILE=` path in Step 1 to where you saved the file.
+3. In the `.sas` file, change the `DATAFILE=` path in Step 1 to where you saved the file.
 4. Run the program from top to bottom.
 
 ---
 
 **Author:** Sharon Rosina Wamalwa, MS Business Analytics, University of South Dakota  
-[LinkedIn](https://www.linkedin.com/in/your-profile) · [Email](mailto:your-email)
+[LinkedIn](https://www.linkedin.com/in/rosina-sharon/)
 
 *Completed as part of a SAS Programming course at the University of South Dakota.*
